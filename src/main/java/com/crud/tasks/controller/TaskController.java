@@ -5,6 +5,10 @@ import com.crud.tasks.domain.TaskDto;
 import com.crud.tasks.mapper.TaskMapper;
 import com.crud.tasks.service.DbService;
 import lombok.RequiredArgsConstructor;
+import org.apache.coyote.Response;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,30 +22,45 @@ public class TaskController {
     private final DbService service;
     private final TaskMapper taskMapper;
 
-    @RequestMapping(method = RequestMethod.GET, value = "")
     @GetMapping
-    public List<TaskDto> getTasks() {
+    public ResponseEntity<List<TaskDto>> getTasks() {
         List<Task> tasks = service.getAllTasks();
-        return taskMapper.mapToTaskDtoList(tasks);
+        return ResponseEntity.ok(taskMapper.mapToTaskDtoList(tasks));
     }
 
-    @RequestMapping(method = RequestMethod.GET, value = "{taskId}")
-    public Task getTask(@PathVariable Long taskId) {
-        return service.getTaskById(taskId);
+    @GetMapping(value = "{taskId}")
+    public ResponseEntity<TaskDto> getTask(@PathVariable Long taskId) throws TaskNotFoundException {
+        return ResponseEntity.ok(taskMapper.mapToTaskDto(service.getTask(taskId)));
     }
 
-    @RequestMapping(method = RequestMethod.DELETE, value = "{taskId}")
-    public void deleteTask(@PathVariable Long taskId) {
+    //    public ResponseEntity<TaskDto> getTask(@PathVariable long taskId) {
+//        try{
+//            return new ResponseEntity<TaskDto>(taskMapper.mapToTaskDto(service.getTask(taskId)), HttpStatus.OK);
+//        } catch (TaskNotFoundException e) {
+//            return new ResponseEntity<>(
+//                    new TaskDto(0L, "theres's no task with id equal to " + taskId, ""), HttpStatus.BAD_REQUEST);
+//        }
+//    }
+//    public ResponseEntity<TaskDto> getTask(@PathVariable Long taskId) throws TaskNotFoundException {
+//        return new ResponseEntity<>(taskMapper.mapToTaskDto(service.getTask(taskId)), HttpStatus.OK);
+//    }
 
+    @DeleteMapping(value = "{taskId}")
+    public ResponseEntity<String> deleteTask(@PathVariable Long taskId) throws TaskNotFoundException {
+        return ResponseEntity.ok().body("Task no. " + taskId + " deleted successfully");
     }
 
-    @RequestMapping(method = RequestMethod.PUT, value = "")
-    public TaskDto updateTask(TaskDto taskDto) {
-        return new TaskDto(1L, "Edited test title", "Test content");
+    @PutMapping(value = "")
+    public ResponseEntity<TaskDto> updateTask(@RequestBody TaskDto taskDto) {
+        Task task = taskMapper.mapToTask(taskDto);
+        Task savedTask = service.saveTask(task);
+        return ResponseEntity.ok(taskMapper.mapToTaskDto(savedTask));
     }
 
-    @RequestMapping(method = RequestMethod.POST, value = "")
-    public void createTask(TaskDto taskDto) {
-
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> createTask(@RequestBody TaskDto taskDto) {
+        Task task = taskMapper.mapToTask(taskDto);
+        service.saveTask(task);
+        return ResponseEntity.ok().build();
     }
 }
